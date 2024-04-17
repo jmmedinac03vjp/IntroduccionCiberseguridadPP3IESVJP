@@ -1,0 +1,69 @@
+---
+version: '3.3'
+
+services:
+
+  bwapp:
+    image: jmmedinac03/bwapp_examen
+    ports:
+      - "${LISTEN_PORT:-8081}:80"
+        #para acceder e inicializar la máquina: http://localhosts:8081/install.php
+        #despues haz login
+        #usuario bee
+        #contraseña bug
+    networks:
+      - laboratorio-net
+  nessus:
+     # Nessus Vulnerability Scanner
+    image: jmmedinac03/nessus_plugins
+        #    image: tenable/nessus:latest-ubuntu
+        #    restart: always
+        #    código de activacion nessus A2AA-KWWR-ZRSM-RW79-LBPH
+        #    acceso a la máquina por https://localhost:8834
+        #    creado usuario:usuario passwd:usuario
+    ports:
+      - 8834:8834
+    networks:
+      - laboratorio-net
+
+  kali:
+    image: kalilinux/kali-rolling
+    restart: unless-stopped
+    command: ["sh", "-c", "apt-get update && apt-cache search kali-linux && apt-get -yf install net-tools iputils-ping kali-linux-headless kali-linux-large && apt-get -yf install && apt -y upgrade"]
+    stdin_open: true
+    tty: true
+    networks:
+      - laboratorio-net
+  WPdb:
+    image: mariadb:10
+    volumes:
+            - WPdata:/var/lib/mysql
+    environment:
+            - MYSQL_ROOT_PASSWORD=secret
+            - MYSQL_DATABASE=wordpress
+            - MYSQL_USER=manager
+            - MYSQL_PASSWORD=secret
+    networks:
+      - laboratorio-net
+  WPweb:
+    image: wordpress:5.4
+    depends_on:
+            - WPdb
+    volumes:
+            - ./target:/var/www/html
+    environment:
+            - WORDPRESS_DB_USER=manager
+            - WORDPRESS_DB_PASSWORD=secret
+            - WORDPRESS_DB_HOST=WPdb
+            - WORDPRESS_DB_NAME=wordpress
+    ports:
+            - 8080:80
+    networks:
+      - laboratorio-net
+
+volumes:
+    data:
+    WPdata:
+networks:
+  laboratorio-net:
+    driver: bridge
